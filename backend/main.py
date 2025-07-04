@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import database, chat
 import os
@@ -8,10 +8,15 @@ load_dotenv()
 
 app = FastAPI(docs_url=None, redoc_url=None)
 
+async def get_db_pool():
+    async for pool in database.get_pool():
+        yield pool
+
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 origins = []
-origins.append(FRONTEND_URL) #Frontend URL
-origins.append("http://localhost:5173") #Local Frontend Url for testing
+if FRONTEND_URL:
+    origins.append(FRONTEND_URL)  # Only add if not None/empty
+origins.append("http://localhost:5173")  # Local Frontend Url for testing
 
 # Add CORS middleware
 app.add_middleware(
@@ -24,14 +29,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the database connection pool and create tables."""
-    await database.get_pool() # This initializes the pool
-    await database.init_db()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Close the database connection pool."""
-    await database.close_pool()
+    async for pool in get_db_pool():
+        await database.init_db(pool)
 
 app.include_router(chat.router)
 
