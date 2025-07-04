@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+langchain
+langchain-google-genai
+asyncpg
+SQLAlchemy
+psycopg2-binary
+aiolimiter
