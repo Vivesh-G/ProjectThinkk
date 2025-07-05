@@ -1,16 +1,13 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import database, chat
+import database
+import chat
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = FastAPI(docs_url=None, redoc_url=None)
-
-async def get_db_pool():
-    async for pool in database.get_pool():
-        yield pool
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 origins = []
@@ -29,8 +26,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    async for pool in get_db_pool():
-        await database.init_db(pool)
+        await database.init_db()
 
 app.include_router(chat.router)
 

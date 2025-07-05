@@ -1,13 +1,11 @@
 import os
-import random
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from langchain.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains import LLMChain
+from langchain.schema.runnable import RunnablePassthrough
 import database
-import asyncpg
 from aiolimiter import AsyncLimiter
 
 load_dotenv()
@@ -59,13 +57,13 @@ answer_prompt = PromptTemplate(input_variables=["chat_history", "user_input"], t
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest, pool: asyncpg.Pool = Depends(database.get_pool)):
+async def chat(request: ChatRequest):
     session_id = request.session_id
     user_input = request.message
     current_mode = request.mode.lower()
 
     # Load conversation history from the database
-    memory = await database.load_memory_from_db(pool, session_id)
+    memory = await database.load_memory_from_db(session_id)
 
     # Determine prompt and modify input if needed
     if current_mode == "reflection":
@@ -78,15 +76,21 @@ async def chat(request: ChatRequest, pool: asyncpg.Pool = Depends(database.get_p
         raise HTTPException(status_code=400, detail="Invalid mode specified.")
 
     # Create and run the Langchain chain
-    chain = LLMChain(llm=llm, prompt=prompt, memory=memory)
+    chain = (
+        RunnablePassthrough.assign(
+            chat_history=lambda x: memory.load_memory_variables({})["chat_history"]
+        )
+        | prompt
+        | llm
+    )
 
     try:
         async with rate_limiter:
-            response_dict = await chain.ainvoke({"chat_history": memory.load_memory_variables({})["chat_history"], "user_input": user_input})
+            response_dict = await chain.ainvoke({"user_input": user_input})
         
-        bot_response = response_dict.get('text', 'Error: Could not generate a valid response.')
+        bot_response = response_dict.content
         # Manually save context to our persistent DB
-        await database.save_context_to_db(pool, session_id, user_input, bot_response)
+        await database.save_context_to_db(session_id, user_input, bot_response)
 
     except Exception as e:
         print(f"Error generating content with Langchain: {e}")
@@ -99,9 +103,9 @@ async def chat(request: ChatRequest, pool: asyncpg.Pool = Depends(database.get_p
 
 
 @router.post("/clear_chat")
-async def clear_chat(request: ClearChatRequest, pool: asyncpg.Pool = Depends(database.get_pool)):
+async def clear_chat(request: ClearChatRequest):
     try:
-        await database.clear_chat_history(pool, request.session_id)
+        await database.clear_chat_history(request.session_id)
         return {"message": f"Chat history cleared for session {request.session_id}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
