@@ -6,7 +6,7 @@ from langchain.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema.runnable import RunnablePassthrough
 import database
-from aiolimiter import AsyncLimiter
+
 
 load_dotenv()
 
@@ -30,9 +30,7 @@ try:
 except Exception as e:
     raise RuntimeError(f"Error initializing Langchain Gemini model: {str(e)}")
 
-# --- Rate Limiter ---
-# Allow 58 requests per minute to stay safely under the 60 RPM limit.
-rate_limiter = AsyncLimiter(58, 60)
+
 
 router = APIRouter()
 
@@ -85,8 +83,7 @@ async def chat(request: ChatRequest):
     )
 
     try:
-        async with rate_limiter:
-            response_dict = await chain.ainvoke({"user_input": user_input})
+        response_dict = await chain.ainvoke({"user_input": user_input})
         
         bot_response = response_dict.content
         # Manually save context to our persistent DB
