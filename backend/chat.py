@@ -25,10 +25,7 @@ if not ANSWER_PROMPT_TEMPLATE:
     raise RuntimeError("ANSWER_PROMPT_TEMPLATE environment variable not set.")
 
 # Configure Gemini LLM
-try:
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY, temperature=0.65)
-except Exception as e:
-    raise RuntimeError(f"Error initializing Langchain Gemini model: {str(e)}")
+
 
 
 
@@ -72,6 +69,12 @@ async def chat(request: ChatRequest):
         prompt = answer_prompt
     else:
         raise HTTPException(status_code=400, detail="Invalid mode specified.")
+
+    # Configure Gemini LLM
+    try:
+        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY, temperature=0.65)
+    except Exception as e:
+        raise RuntimeError(f"Error initializing Langchain Gemini model: {str(e)}")
 
     # Create and run the Langchain chain
     chain = (
