@@ -39,7 +39,7 @@ export default function Header({ clearChat }: HeaderProps) {
                 New Chat
               </button>
               <a 
-                href="https://github.com/your-repo"
+                href="https://github.com/Vivesh-G/ProjectThinkk"
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="block px-4 py-2 text-sm text-white hover:bg-gray-800"
