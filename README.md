@@ -2,11 +2,15 @@
 
 ProjectThinkk is a full-stack AI-powered chat application that helps users reflect and get answers using LLM's.
 
+Live Demo: https://project-thinkk.vercel.app/
+
 ![image](https://github.com/user-attachments/assets/2b4de39c-4a17-4ca9-80ae-d8e1377496bf)
 
 ## Why #ProjectThinkk
 
-A random thought, "Are we thinking less are the onset of LLM models? What if the models ask us questions back?" lead to this project.
+A random thought, "Are we thinking less due to overuse of LLMs? What if the models ask us questions back?" lead to this project.
+
+LLM nowadays are faster than google search. The answer that we are looking for is generated in a fraction of time, not like the old days where we need to surf through multiple pages after a google search to find the answer.
 
 If we overuse LLMs for quick answers, what are the long-term implications for our cognitive abilities? We believe that consistent, unchallenging interaction with LLMs could potentially lead to diminished brain activity
 
