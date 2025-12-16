@@ -72,7 +72,7 @@ async def chat(request: ChatRequest):
 
     # Configure Gemini LLM
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY, temperature=0.65)
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY, temperature=0.65)
     except Exception as e:
         raise RuntimeError(f"Error initializing Langchain Gemini model: {str(e)}")
 

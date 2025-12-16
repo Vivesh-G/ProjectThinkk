@@ -1,7 +1,7 @@
 import os
 import asyncpg
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
