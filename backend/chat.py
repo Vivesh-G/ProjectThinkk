@@ -2,9 +2,8 @@ import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.schema.runnable import RunnablePassthrough
 import database
 
 
@@ -24,11 +23,6 @@ ANSWER_PROMPT_TEMPLATE = os.getenv("ANSWER_PROMPT_TEMPLATE")
 if not ANSWER_PROMPT_TEMPLATE:
     raise RuntimeError("ANSWER_PROMPT_TEMPLATE environment variable not set.")
 
-# Configure Gemini LLM
-
-
-
-
 router = APIRouter()
 
 # --- Pydantic Models ---
@@ -47,8 +41,17 @@ class ClearChatRequest(BaseModel):
     session_id: str
 
 # --- Prompt Templates ---
-reflection_prompt = PromptTemplate(input_variables=["chat_history", "user_input"], template=REFLECTION_PROMPT_TEMPLATE)
-answer_prompt = PromptTemplate(input_variables=["chat_history", "user_input"], template=ANSWER_PROMPT_TEMPLATE)
+reflection_prompt = ChatPromptTemplate.from_messages([
+    ("system", REFLECTION_PROMPT_TEMPLATE),
+    MessagesPlaceholder(variable_name="chat_history"),
+    ("human", "{user_input}")
+])
+
+answer_prompt = ChatPromptTemplate.from_messages([
+    ("system", ANSWER_PROMPT_TEMPLATE),
+    MessagesPlaceholder(variable_name="chat_history"),
+    ("human", "{user_input}")
+])
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -58,7 +61,7 @@ async def chat(request: ChatRequest):
     current_mode = request.mode.lower()
 
     # Load conversation history from the database
-    memory = await database.load_memory_from_db(session_id)
+    history = await database.load_history_from_db(session_id)
 
     # Determine prompt and modify input if needed
     if current_mode == "reflection":
@@ -72,21 +75,18 @@ async def chat(request: ChatRequest):
 
     # Configure Gemini LLM
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY, temperature=0.65)
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY, temperature=0.7)
     except Exception as e:
         raise RuntimeError(f"Error initializing Langchain Gemini model: {str(e)}")
 
     # Create and run the Langchain chain
-    chain = (
-        RunnablePassthrough.assign(
-            chat_history=lambda x: memory.load_memory_variables({})["chat_history"]
-        )
-        | prompt
-        | llm
-    )
+    chain = prompt | llm
 
     try:
-        response_dict = await chain.ainvoke({"user_input": user_input})
+        response_dict = await chain.ainvoke({
+            "user_input": user_input,
+            "chat_history": history
+        })
         
         bot_response = response_dict.content
         # Manually save context to our persistent DB

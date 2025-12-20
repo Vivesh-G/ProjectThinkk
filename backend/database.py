@@ -1,6 +1,5 @@
 import os
 import asyncpg
-from langchain.memory import ConversationBufferMemory
 from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
 
@@ -33,8 +32,8 @@ async def init_db():
     finally:
         await conn.close()
 
-async def load_memory_from_db(session_id: str, k: int = 5) -> ConversationBufferMemory:
-    """Loads chat history for a session and returns a ConversationBufferWindowMemory instance."""
+async def load_history_from_db(session_id: str, k: int = 10) -> list[HumanMessage | AIMessage]:
+    """Loads chat history for a session and returns a list of LangChain messages."""
     conn = await get_db_connection()
     try:
         rows = await conn.fetch(
@@ -44,13 +43,13 @@ async def load_memory_from_db(session_id: str, k: int = 5) -> ConversationBuffer
     finally:
         await conn.close()
 
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    messages = []
     for row in rows:
         if row['sender'] == 'user':
-            memory.chat_memory.add_message(HumanMessage(content=row['text']))
+            messages.append(HumanMessage(content=row['text']))
         else:  # 'ai'
-            memory.chat_memory.add_message(AIMessage(content=row['text']))
-    return memory
+            messages.append(AIMessage(content=row['text']))
+    return messages
 
 async def save_context_to_db(session_id: str, user_input: str, ai_output: str):
     """Saves the user input and AI output to the database."""
